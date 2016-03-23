@@ -66,13 +66,12 @@ class QueryBuilder
         switch (true) {
 
             // no sorting enabled
-            case is_null($pageOptions) : {
+            case is_null($pageOptions) :
                 $valid = true;
                 break;
-            }
 
             // some sorting enabled
-            case is_array($pageOptions) : {
+            case is_array($pageOptions) :
 
                 //array('limit' => 20, 'page' => 1)
 
@@ -83,13 +82,11 @@ class QueryBuilder
                 $valid = $validLimit && $validPage;
 
                 break;
-            }
 
             // not null or array
-            default : {
+            default :
                 $valid = false;
                 break;
-            }
         }
 
         return $valid;
@@ -105,18 +102,12 @@ class QueryBuilder
      * @param ConditionBlock $conditions
      * @param array          $sortOptions
      * @param null|array     $pageOptions
+     * @param null|array     $groupOptions
      *
      * @return string
      */
-    public static function buildSelectQuery(
-        $tableName,
-        $fieldsList,
-        ConditionBlock $conditions = null,
-        $sortOptions,
-        $pageOptions
-    )
+    public static function buildSelectQuery($tableName, $fieldsList, ConditionBlock $conditions = null, $sortOptions = [], $pageOptions = null, $groupOptions = null)
     {
-
         $fieldsString = self::buildFieldListString($fieldsList);
 
         $query = vsprintf(
@@ -130,6 +121,8 @@ class QueryBuilder
         if ($conditions instanceof ConditionBlock) {
             $query .= vsprintf(' WHERE %s', [(string)$conditions]);
         }
+
+        $query .= self::buildGroupSubQuery($groupOptions);
 
         $query .= self::buildSortSubQuery($sortOptions);
 
@@ -166,12 +159,7 @@ class QueryBuilder
      *
      * @return string
      */
-    public static function buildUpdateQuery(
-        $tableName,
-        array $fieldValueList,
-        ConditionBlock $conditions = null,
-        $pageOptions = null
-    )
+    public static function buildUpdateQuery($tableName, array $fieldValueList, ConditionBlock $conditions = null, $pageOptions = null)
     {
         $template = 'UPDATE %s SET %s';
 
@@ -194,14 +182,18 @@ class QueryBuilder
     /**
      * @param string $tableName
      * @param array  $fieldValueList
+     * @param bool   $ignoreKeyDublicate
      *
      * @return string
      */
-    public static function buildInsertQuery($tableName, array $fieldValueList)
+    public static function buildInsertQuery($tableName, array $fieldValueList, $ignoreKeyDublicate = false)
     {
-        $template = 'INSERT INTO %s (%s) VALUES (%s)';
+        $template = 'INSERT %s INTO %s (%s) VALUES (%s)';
+
+        $ignore = true === $ignoreKeyDublicate ? 'IGNORE' : '';
 
         $query = vsprintf($template, [
+            $ignore,
             self::escapeName($tableName),
             self::buildFieldListString(array_keys($fieldValueList)),
             implode(',', array_map(function ($item) {
@@ -223,7 +215,8 @@ class QueryBuilder
 
         foreach ($fieldList as $field) {
             if (is_array($field)) {
-                $fld = reset($field);
+                $keys = array_keys($field);
+                $fld = reset($keys);
                 $alias = end($field);
                 $prebuild[] = self::escapeName($fld) . ' AS ' . self::escapeName($alias);
             } else {
@@ -247,13 +240,40 @@ class QueryBuilder
             $preOptions = [];
 
             foreach ($sortOptions as $filed => $value) {
-                $preOptions[] = vsprintf('`%s` %s', [$filed, $value]);
+                $preOptions[] = vsprintf('`%s` %s', [
+                    $filed,
+                    $value,
+                ]);
             }
 
             $part .= vsprintf(' ORDER BY %s', [implode(' , ', $preOptions)]);
         }
 
         return $part;
+    }
+
+    /**
+     * @param array $groupOptions
+     *
+     * @return string
+     */
+    private static function buildGroupSubQuery($groupOptions)
+    {
+        $part = '';
+
+        if (!is_array($groupOptions) || 0 === count($groupOptions)) {
+            return $part;
+        }
+
+        $parts = [];
+
+        foreach ($groupOptions as $element) {
+            $parts[] = self::escapeName($element);
+        }
+
+        $part = implode(', ', $parts);
+
+        return ' GROUP BY ' . $part;
     }
 
     /**
@@ -272,7 +292,10 @@ class QueryBuilder
                 $part .= vsprintf(' LIMIT %d', [$limit]);
             } else {
                 $offset = (((int)$pageOptions['page']) - 1) * $limit;
-                $part .= vsprintf(' LIMIT %d,%d', [$offset, $limit]);
+                $part .= vsprintf(' LIMIT %d,%d', [
+                    $offset,
+                    $limit,
+                ]);
             }
         }
 
@@ -290,7 +313,10 @@ class QueryBuilder
 
         foreach ($fieldValueList as $column => $value) {
             $subQueryParts[] = vsprintf('%s = %s',
-                [self::escapeName($column), '\'' . self::escapeValue($value) . '\'']);
+                                        [
+                                            self::escapeName($column),
+                                            '\'' . self::escapeValue($value) . '\'',
+                                        ]);
         }
 
         return implode(', ', $subQueryParts);
@@ -349,6 +375,6 @@ class QueryBuilder
             }
         }
 
-        return $is_function ? $fieldName : "`{$fieldName}`";
+        return $is_function ? $fieldName : vsprintf('`%s`', [$fieldName]);
     }
 }

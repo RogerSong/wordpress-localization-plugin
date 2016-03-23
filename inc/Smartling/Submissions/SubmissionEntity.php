@@ -5,6 +5,7 @@ namespace Smartling\Submissions;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Smartling\Base\SmartlingEntityAbstract;
+use Smartling\Bootstrap;
 use Smartling\Helpers\FileUriHelper;
 use Smartling\Helpers\TextHelper;
 use Smartling\Helpers\WordpressContentTypeHelper;
@@ -29,11 +30,14 @@ use Smartling\Helpers\WordpressContentTypeHelper;
  * @property int         $completed_string_count
  * @property string      $status
  * @property int         $is_locked
+ * @property \DateTime   $last_modified
  *
  * @package Smartling\Submissions
  */
 class SubmissionEntity extends SmartlingEntityAbstract
 {
+
+    const DATETIME_FORMAT = 'Y-m-d H:i:s';
 
     /**
      * Submission Status  'Not Translated'
@@ -92,6 +96,7 @@ class SubmissionEntity extends SmartlingEntityAbstract
             'word_count'             => self::DB_TYPE_U_BIGINT . ' ' . self::DB_TYPE_DEFAULT_ZERO,
             'status'                 => self::DB_TYPE_STRING_SMALL,
             'is_locked'              => self::DB_TYPE_UINT_SWITCH . ' ' . self::DB_TYPE_DEFAULT_ZERO,
+            'last_modified'          => self::DB_TYPE_DATETIME,
         ];
     }
 
@@ -163,7 +168,11 @@ class SubmissionEntity extends SmartlingEntityAbstract
             ],
             [
                 'type'    => 'index',
-                'columns' => ['source_blog_id', 'source_id', 'content_type'],
+                'columns' => [
+                    'source_blog_id',
+                    'source_id',
+                    'content_type',
+                ],
             ],
         ];
     }
@@ -176,6 +185,40 @@ class SubmissionEntity extends SmartlingEntityAbstract
         return [
             'progress' => $this->getCompletionPercentage() . '%',
         ];
+    }
+
+    /**
+     * @return \DateTime
+     */
+    public function getLastModified()
+    {
+        $value = $this->stateFields['last_modified'];
+
+        $dt = \DateTime::createFromFormat(self::DATETIME_FORMAT, $this->stateFields['last_modified']);
+
+        if (false === $dt) {
+            $dt = \DateTime::createFromFormat('U', 0);
+        }
+
+        return $dt;
+    }
+
+    /**
+     * @param \DateTime $dateTime
+     */
+    public function setLastModified($dateTime)
+    {
+        if ($dateTime instanceof \DateTime) {
+            $this->stateFields['last_modified'] = $dateTime->format(self::DATETIME_FORMAT);
+        } else {
+            $dt = \DateTime::createFromFormat(self::DATETIME_FORMAT, $dateTime);
+            if (false === $dt) {
+                $dt = '1990-01-01 12:00:00';
+            } else {
+                $dt = $dt->format(self::DATETIME_FORMAT);
+            }
+            $this->stateFields['last_modified'] = $dt;
+        }
     }
 
     /**
@@ -216,22 +259,17 @@ class SubmissionEntity extends SmartlingEntityAbstract
      * @param string $status
      *
      * @return SubmissionEntity
+     * @throws \InvalidArgumentException
      */
     public function setStatus($status)
     {
         if (in_array($status, self::$submissionStatuses)) {
             $this->stateFields['status'] = $status;
         } else {
-            $message = vsprintf(
-                'Invalid status value. Got \'%s\', expected one of: %s',
-                [
-                    $status,
-                    implode(
-                        ',',
-                        self::$submissionStatuses
-                    ),
-                ]
-            );
+            $message = vsprintf('Invalid status value. Got \'%s\', expected one of: %s', [
+                $status,
+                implode(',', self::$submissionStatuses),
+            ]);
 
             $this->logger->error($message);
 
@@ -285,8 +323,7 @@ class SubmissionEntity extends SmartlingEntityAbstract
         $source_title = $this->stateFields['source_title'];
 
         if ($withReplacement) {
-            $source_title = mb_strlen($source_title, 'utf8') > 255
-                ? TextHelper::mb_wordwrap($source_title, 252) . '...'
+            $source_title = mb_strlen($source_title, 'utf8') > 255 ? TextHelper::mb_wordwrap($source_title, 252) . '...'
                 : $source_title;
         }
 
@@ -365,16 +402,10 @@ class SubmissionEntity extends SmartlingEntityAbstract
         if (array_key_exists($content_type, $reverseMap)) {
             $this->stateFields['content_type'] = $reverseMap[$content_type];
         } else {
-            $message = vsprintf(
-                'Invalid content type. Got \'%s\', expected one of: %s',
-                [
-                    $content_type,
-                    implode(
-                        ',',
-                        $reverseMap
-                    ),
-                ]
-            );
+            $message = vsprintf('Invalid content type. Got \'%s\', expected one of: %s', [
+                $content_type,
+                implode(',', $reverseMap),
+            ]);
             $this->logger->error($message);
             throw new \InvalidArgumentException($message);
         }
