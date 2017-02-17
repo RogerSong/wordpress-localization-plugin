@@ -5,6 +5,7 @@ namespace Smartling;
 use Exception;
 use Psr\Log\LoggerInterface;
 use Smartling\Base\ExportedAPI;
+use Smartling\ContentTypes\ContentTypeAdrotateAd;
 use Smartling\ContentTypes\ContentTypeAttachment;
 use Smartling\ContentTypes\ContentTypeCategory;
 use Smartling\ContentTypes\ContentTypeNavigationMenu;
@@ -15,6 +16,7 @@ use Smartling\ContentTypes\ContentTypePostTag;
 use Smartling\ContentTypes\ContentTypeWidget;
 use Smartling\ContentTypes\CustomPostType;
 use Smartling\ContentTypes\CustomTaxonomyType;
+use Smartling\DbAl\WordpressContentEntities\AdrotateAdEntity;
 use Smartling\Exception\MultilingualPluginNotFoundException;
 use Smartling\Exception\SmartlingBootException;
 use Smartling\Helpers\DiagnosticsHelper;
@@ -350,6 +352,8 @@ class Bootstrap
 
         ContentTypeNavigationMenuItem::register($di);
         ContentTypeNavigationMenu::register($di);
+        
+        ContentTypeAdrotateAd::register($di);
 
         /**
          * Post types and taxonomies are registered on 'init' hook, but this code is executed on 'plugins_loaded' hook,
