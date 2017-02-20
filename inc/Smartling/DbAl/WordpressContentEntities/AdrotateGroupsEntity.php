@@ -3,10 +3,10 @@
 namespace Smartling\DbAl\WordpressContentEntities;
 
 /**
- * Class AdrotateAdEntity
+ * Class AdrotateGroupsEntity
  * @package Smartling\DbAl\WordpressContentEntities
  */
-class AdrotateAdEntity extends AdrotateBaseEntityAbstract
+class AdrotateGroupsEntity extends AdrotateBaseEntityAbstract
 {
     /**
      * @return array;
@@ -21,7 +21,7 @@ class AdrotateAdEntity extends AdrotateBaseEntityAbstract
      */
     public function getTitle()
     {
-        return $this->title;
+        return $this->name;
     }
     
     /**
@@ -61,10 +61,10 @@ class AdrotateAdEntity extends AdrotateBaseEntityAbstract
             'id'         => (int)$this->{$this->getPrimaryFieldName()},
             'title'      => $this->getTitle(),
             'type'       => $this->getType(),
-            'author'     => $this->author,
+            'author'     => null,
             'status'     => null,
             'locales'    => null,
-            'updated'    => date('Y-m-d H:i:s', $this->updated),
+            'updated'    => null,
         ];
     }
     
@@ -77,7 +77,7 @@ class AdrotateAdEntity extends AdrotateBaseEntityAbstract
      */
     public static function getTableName()
     {
-        return 'adrotate';
+        return 'adrotate_groups';
     }
     
     /**
@@ -88,29 +88,29 @@ class AdrotateAdEntity extends AdrotateBaseEntityAbstract
         // add all fields.
         return [
             'id',
-            'title',
-            'bannercode',
-            'thetime',
-            'updated',
-            'author',
-            'imagetype',
-            'image',
-            'paid',
-            'tracker',
-            'desktop',
+            'name',
+            'modus',
+            'fallback',
+            'cat',
+            'cat_loc',
+            'cat_par',
+            'page',
+            'page_loc',
+            'page_par',
             'mobile',
-            'tablet',
-            'os_ios',
-            'os_android',
-            'os_other',
-            'responsive',
-            'type',
-            'weight',
-            'budget',
-            'crate',
-            'irate',
-            'cities',
-            'countries'
+            'geo',
+            'wrapper_before',
+            'wrapper_after',
+            'align',
+            'gridrows',
+            'gridcolumns',
+            'admargin',
+            'admargin_bottom',
+            'admargin_left',
+            'admargin_right',
+            'adwidth',
+            'adheight',
+            'adspeed'
         ];
     }
 }

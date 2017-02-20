@@ -4,6 +4,7 @@ namespace Smartling\DbAl\WordpressContentEntities;
 
 use Psr\Log\LoggerInterface;
 use Smartling\DbAl\SmartlingToCMSDatabaseAccessWrapperInterface;
+use Smartling\Helpers\ArrayHelper;
 use Smartling\Helpers\QueryBuilder\Condition\Condition;
 use Smartling\Helpers\QueryBuilder\Condition\ConditionBlock;
 use Smartling\Helpers\QueryBuilder\Condition\ConditionBuilder;
@@ -41,11 +42,11 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
         
         $this->fields = $this->getFields();
         
-        $this->setEntityFields($this->fields);
-        
         foreach (static::getFieldDefinitions() as $fieldName) {
             $this->stateFields[$fieldName] = '';
         }
+        
+        $this->setEntityFields($this->fields);
     }
     
     /**
@@ -59,10 +60,8 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
     {
         $originalEntity = json_encode($entity->toArray(false));
         $this->getLogger()->debug(vsprintf('Starting saving adrotate entity: %s', [$originalEntity]));
-        
         $is_insert = in_array($entity->id, [0, null], true);
-        
-        $fields = static::getChangedFields($entity);
+        $fields = $entity->toArray();
         
         foreach ($fields as $field => $value) {
             if (null === $value) {
@@ -105,7 +104,6 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
                     $this->getDbal()->getLastErrorMessage(),
                 ]
             );
-            
             $this->getLogger()->error($message);
         }
         
@@ -140,50 +138,140 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
     }
     
     /**
-     * Get changed fields.
+     * Loads the entity from database
      *
-     * @return array
+     * @param $guid
+     *
+     * @return EntityAbstract
      */
-    public function getChangedFieldsHelper()
+    public function get($guid)
     {
-        $curFields = $this->stateFields;
-        $initialFields = $this->initialFields;
-        $output = [];
+        $block = new ConditionBlock(ConditionBuilder::CONDITION_BLOCK_LEVEL_OPERATOR_AND);
+        $condition = Condition::getCondition(ConditionBuilder::CONDITION_SIGN_EQ, 'id', [$guid]);
+        $block->addCondition($condition);
+        $query = QueryBuilder::buildSelectQuery(
+            $this->getDbal()->completeTableName(static::getTableName()),
+            static::getFieldDefinitions(),
+            $block
+        );
         
-        $fieldNames = array_keys($curFields);
+        $queryResult = $this->getDbal()->fetch($query, \ARRAY_A);
+        $result = [];
         
-        foreach ($fieldNames as $fieldName) {
-            if (!array_key_exists($fieldName, $initialFields) ||
-                (((string)$initialFields[$fieldName]) !== ((string)$curFields[$fieldName]))) {
-                $output[$fieldName] = (string)$curFields[$fieldName];
+        if (is_array($queryResult) && 1 === count($queryResult)) {
+            foreach ($queryResult as $row) {
+                $result[] = $this->resultToEntity($row);
             }
         }
         
-        return $output;
+        return ArrayHelper::first($result);
     }
     
     /**
-     * Static methods
+     * Get all entities.
+     *
+     * @param string $limit
+     * @param int    $offset
+     * @param bool   $orderBy
+     * @param bool   $order
+     *
+     * @return array Array of entities
      */
+    public function getAll(
+        $limit = '',
+        $offset = 0,
+        $orderBy = false,
+        $order = false
+    ) {
+        $page = $limit && $offset > 0 ? $offset/$limit + 1 : 1;
+        $pageOptions = '' === $limit ? null : ['limit' => $limit, 'page' => $page];
+        $query = QueryBuilder::buildSelectQuery(
+            $this->getDbal()->completeTableName(static::getTableName()),
+            static::getFieldDefinitions(),
+            null,
+            // Sort options
+            [],
+            // Page options
+            $pageOptions
+        );
+        
+        $queryResult = $this->getDbal()->fetch($query, \ARRAY_A);
+        
+        $result = [];
+        
+        if (is_array($queryResult)) {
+            foreach ($queryResult as $row) {
+                $result[] = $this->resultToEntity($row);
+            }
+        }
+        
+        return $result;
+    }
     
     /**
-     * Get changed fields.
+     * Get total count of entities.
      *
-     * @param \Smartling\DbAl\WordpressContentEntities\EntityAbstract $entity
-     *
-     * @return array
+     * @return int
      */
-    public static function getChangedFields(EntityAbstract $entity)
+    public function getTotal()
     {
-        $id = $entity->id;
+        $count = 0;
+        $query = QueryBuilder::buildSelectQuery(
+            $this->getDbal()->completeTableName(static::getTableName()),
+            [['COUNT(*)' => 'cnt']]
+        );
         
-        $is_insert = in_array($id, [0, null], true);
+        $queryResult = $this->getDbal()->fetch($query, \ARRAY_A);
         
-        $fields = true === $is_insert
-            ? $entity->toArray(false)
-            : $entity->getChangedFieldsHelper();
+        if (is_array($queryResult)) {
+            $firstEl = ArrayHelper::first($queryResult);
+            $count = $firstEl['cnt'];
+        }
         
-        return $fields;
+        return $count;
     }
     
+    /**
+     * Get fields.
+     *
+     * @return mixed
+     */
+    public function getFields()
+    {
+        return static::getFieldDefinitions();
+    }
+    
+    /**
+     * Log query.
+     *
+     * @param string $query
+     */
+    public function logQuery($query)
+    {
+        if (true === $this->getDbal()->needRawSqlLog()) {
+            $this->getLogger()->debug($query);
+        }
+    }
+    
+    /**
+     * Converts object into EntityAbstract child
+     *
+     * @param array          $arr
+     * @param EntityAbstract $entity
+     *
+     * @return EntityAbstract
+     */
+    protected function resultToEntity(array $arr)
+    {
+        $className = get_class($this);
+        $entity = new $className($this->getLogger());
+        
+        foreach ($this->fields as $fieldName) {
+            if (array_key_exists($fieldName, $arr)) {
+                $entity->{$fieldName} = $arr[$fieldName];
+            }
+        }
+        
+        return $entity;
+    }
 }

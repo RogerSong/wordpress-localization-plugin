@@ -3,15 +3,15 @@
 namespace Smartling\ContentTypes;
 
 /**
- * Class ContentTypeAdrotateAd
+ * Class ContentTypeAdrotateGroups
  * @package Smartling\ContentTypes
  */
-class ContentTypeAdrotateAd extends ContentTypeAdrotateBasic
+class ContentTypeAdrotateGroups extends ContentTypeAdrotateBasic
 {
     /**
      * The system name of Wordpress content type to make references safe.
      */
-    const WP_CONTENT_TYPE = 'adrotate_ad';
+    const WP_CONTENT_TYPE = 'adrotate_groups';
     
     /**
      * Display name of content type, e.g.: Post
@@ -20,7 +20,7 @@ class ContentTypeAdrotateAd extends ContentTypeAdrotateBasic
      */
     public function getLabel()
     {
-        return __('AdRotate');
+        return __('AdRotate Groups');
     }
     
     /**
@@ -28,6 +28,6 @@ class ContentTypeAdrotateAd extends ContentTypeAdrotateBasic
      */
     public function getEntityClass()
     {
-        return 'Smartling\DbAl\WordpressContentEntities\AdrotateAdEntity';
+        return 'Smartling\DbAl\WordpressContentEntities\AdrotateGroupsEntity';
     }
 }

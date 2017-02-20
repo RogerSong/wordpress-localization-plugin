@@ -6,6 +6,7 @@ use Exception;
 use Psr\Log\LoggerInterface;
 use Smartling\Base\ExportedAPI;
 use Smartling\ContentTypes\ContentTypeAdrotateAd;
+use Smartling\ContentTypes\ContentTypeAdrotateGroups;
 use Smartling\ContentTypes\ContentTypeAttachment;
 use Smartling\ContentTypes\ContentTypeCategory;
 use Smartling\ContentTypes\ContentTypeNavigationMenu;
@@ -353,7 +354,9 @@ class Bootstrap
         ContentTypeNavigationMenuItem::register($di);
         ContentTypeNavigationMenu::register($di);
         
+        // Adrotate.
         ContentTypeAdrotateAd::register($di);
+        ContentTypeAdrotateGroups::register($di);
 
         /**
          * Post types and taxonomies are registered on 'init' hook, but this code is executed on 'plugins_loaded' hook,
