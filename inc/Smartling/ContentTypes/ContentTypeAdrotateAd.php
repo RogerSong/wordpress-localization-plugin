@@ -2,6 +2,7 @@
 
 namespace Smartling\ContentTypes;
 
+use Smartling\DbAl\WordpressContentEntities\AdrotateLinkmetaEntity;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
@@ -49,17 +50,21 @@ class ContentTypeAdrotateAd extends ContentTypeAdrotateBasic
      */
     public function registerFilters()
     {
-        $filters = ['schedule', 'group'];
+        $filters = [
+            'metaId'   => ContentTypeAdrotateLinkmeta::WP_CONTENT_TYPE,
+            'schedule' => ContentTypeAdrotateSchedule::WP_CONTENT_TYPE,
+            'group'    => ContentTypeAdrotateGroups::WP_CONTENT_TYPE
+        ];
         
-        foreach ($filters as $filter) {
+        foreach ($filters as $fieldName => $typeName) {
             $di = $this->getContainerBuilder();
-            $wrapperId = 'referenced-content.adrotate_'.$filter;
+            $wrapperId = 'referenced-content.adrotate_'.$fieldName;
             $definition = $di->register($wrapperId, 'Smartling\Helpers\MetaFieldProcessor\ReferencedContentProcessor');
             $definition
                 ->addArgument($di->getDefinition('logger'))
                 ->addArgument($di->getDefinition('translation.helper'))
-                ->addArgument($filter)
-                ->addArgument(ContentTypeAdrotateSchedule::WP_CONTENT_TYPE)
+                ->addArgument($fieldName)
+                ->addArgument($typeName)
                 ->addMethodCall('setContentHelper', [$di->getDefinition('content.helper')]);
     
             $di->get('meta-field.processor.manager')->registerProcessor($di->get($wrapperId));

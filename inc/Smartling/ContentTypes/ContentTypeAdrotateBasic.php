@@ -54,7 +54,9 @@ abstract class ContentTypeAdrotateBasic extends ContentTypeAbstract
         $definition = $di->register($wrapperId, $this->getEntityClass());
         $definition
             ->addArgument($di->getDefinition('logger'))
-            ->addArgument($di->get('site.db'));
+            ->addArgument($di->get('site.db'))
+            ->addMethodCall('setSubmissionManager', [$di->getDefinition('manager.submission')])
+            ->addMethodCall('setSiteHelper', [$di->getDefinition('site.helper')]);
         
         $di->get('factory.contentIO')->registerHandler($this->getSystemName(), $di->get($wrapperId));
     }

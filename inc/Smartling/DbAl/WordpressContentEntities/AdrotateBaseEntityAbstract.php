@@ -3,12 +3,15 @@
 namespace Smartling\DbAl\WordpressContentEntities;
 
 use Psr\Log\LoggerInterface;
+use Smartling\Bootstrap;
 use Smartling\DbAl\SmartlingToCMSDatabaseAccessWrapperInterface;
 use Smartling\Helpers\ArrayHelper;
 use Smartling\Helpers\QueryBuilder\Condition\Condition;
 use Smartling\Helpers\QueryBuilder\Condition\ConditionBlock;
 use Smartling\Helpers\QueryBuilder\Condition\ConditionBuilder;
 use Smartling\Helpers\QueryBuilder\QueryBuilder;
+use Smartling\Helpers\SiteHelper;
+use Smartling\Submissions\SubmissionManager;
 
 /**
  * Class AdrotateBaseEntityAbstract
@@ -31,6 +34,12 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
     
     /** @var SmartlingToCMSDatabaseAccessWrapperInterface */
     private $dbal;
+    
+    /** @var  SubmissionManager */
+    private $submissionManager;
+    
+    /** @var  SiteHelper */
+    private $siteHelper;
     
     /**
      * AdrotateAdEntity constructor.
@@ -99,8 +108,7 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
             unset ($fields['id']);
         }
         
-        $tableName = $this->getDbal()
-            ->completeTableName(static::getTableName());
+        $tableName = $this->completeTableName(static::getTableName());
         
         if ($is_insert) {
             $storeQuery = QueryBuilder::buildInsertQuery($tableName, $fields);
@@ -207,7 +215,7 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
             'id', [$guid]);
         $block->addCondition($condition);
         $query = QueryBuilder::buildSelectQuery(
-            $this->getDbal()->completeTableName(static::getTableName()),
+            $this->completeTableName(static::getTableName()),
             static::getFieldDefinitions(),
             $block
         );
@@ -246,7 +254,7 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
             'page'  => $page,
         ];
         $query = QueryBuilder::buildSelectQuery(
-            $this->getDbal()->completeTableName(static::getTableName()),
+            $this->completeTableName(static::getTableName()),
             static::getFieldDefinitions(),
             null,
             // Sort options
@@ -278,7 +286,7 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
     public function getByCondition(ConditionBlock $conditionBlock)
     {
         $query = QueryBuilder::buildSelectQuery(
-            $this->getDbal()->completeTableName(static::getTableName()),
+            $this->completeTableName(static::getTableName()),
             static::getFieldDefinitions(),
             $conditionBlock
         );
@@ -295,7 +303,7 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
     {
         $count = 0;
         $query = QueryBuilder::buildSelectQuery(
-            $this->getDbal()->completeTableName(static::getTableName()),
+            $this->completeTableName(static::getTableName()),
             [['COUNT(*)' => 'cnt']]
         );
         
@@ -307,5 +315,47 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
         }
         
         return $count;
+    }
+    
+    /**
+     * @param string $tableName
+     *
+     * @return mixed
+     */
+    public function completeTableName($tableName)
+    {
+        return $this->getDbal()->getWpdb()->prefix . $tableName;
+    }
+    
+    /**
+     * @return \Smartling\Submissions\SubmissionManager
+     */
+    public function getSubmissionManager()
+    {
+        return Bootstrap::getContainer()->get('entrypoint')->getSubmissionManager();
+    }
+    
+    /**
+     * @param \Smartling\Submissions\SubmissionManager $submissionManager
+     */
+    public function setSubmissionManager($submissionManager)
+    {
+        $this->submissionManager = $submissionManager;
+    }
+    
+    /**
+     * @return \Smartling\Helpers\SiteHelper
+     */
+    public function getSiteHelper()
+    {
+        return Bootstrap::getContainer()->get('entrypoint')->getSiteHelper();
+    }
+    
+    /**
+     * @param \Smartling\Helpers\SiteHelper $siteHelper
+     */
+    public function setSiteHelper($siteHelper)
+    {
+        $this->siteHelper = $siteHelper;
     }
 }

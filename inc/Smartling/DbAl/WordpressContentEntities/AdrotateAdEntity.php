@@ -70,7 +70,15 @@ class AdrotateAdEntity extends AdrotateBaseEntityAbstract
         );
         $conditionBlock->addCondition($condition);
         
-        return $entity->getByCondition($conditionBlock);
+        $result = $entity->getByCondition($conditionBlock);
+        
+        foreach ($result as $key => $value) {
+            $result[$key]['metaId'] = $value['id'];
+            unset($result[$key]['id']);
+            $tagValue[$key]['ad'] = $this->getId();
+        }
+    
+        return $result;
     }
     
     /**
@@ -82,45 +90,13 @@ class AdrotateAdEntity extends AdrotateBaseEntityAbstract
     {
         // Check if already exists.
         /** @var AdrotateLinkmetaEntity $entity */
-        $entity = new AdrotateLinkmetaEntity($this->getLogger(),
-            $this->getDbal());
-        $conditionBlock = new ConditionBlock(ConditionBuilder::CONDITION_BLOCK_LEVEL_OPERATOR_AND);
-        
-        // Check if values are not empty.
-        if (is_array($tagValue) && !empty($tagValue)) {
-            foreach ($tagValue as $fieldName => $fieldValue) {
-                $condition = Condition::getCondition(
-                    ConditionBuilder::CONDITION_SIGN_EQ,
-                    $fieldName,
-                    [$fieldValue]
-                );
-                $conditionBlock->addCondition($condition);
-            }
-            
-            $fetchResult = $entity->getByCondition($conditionBlock);
-    
-            if (count($fetchResult) == 0) {
-                // Store linkmeta entity in DB.
-                $tableName = $this->getDbal()->completeTableName($entity::getTableName());
-                $storeQuery = QueryBuilder::buildInsertQuery(
-                    $tableName,
-                    $tagValue
-                );
-                $this->logQuery($storeQuery);
-                $this->getDbal()->query($storeQuery);
-            } else {
-                $this->getLogger()->debug(
-                    sprintf(
-                        'Row with these values %s already exists in adrotate_linkmeta table',
-                        json_encode($tagValue)
-                    )
-                );
-            }
-        } else {
-            $this->getLogger()->debug(
-                sprintf('Field values %s are empty', json_encode($tagValue))
-            );
-        }
+        $entity = new AdrotateLinkmetaEntity($this->getLogger(), $this->getDbal());
+        $currentLinkMeta = $entity->get($tagValue['metaId']);
+        $currentLinkMeta->setUser($tagValue['user']);
+        $currentLinkMeta->setSchedule($tagValue['schedule']);
+        $currentLinkMeta->setAd($this->getId());
+        $currentLinkMeta->setGroup($tagValue['group']);
+        $entity->set($currentLinkMeta);
     }
     
     /**
