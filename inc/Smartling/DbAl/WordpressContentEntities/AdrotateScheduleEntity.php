@@ -3,17 +3,17 @@
 namespace Smartling\DbAl\WordpressContentEntities;
 
 /**
- * Class AdrotateGroupsEntity
+ * Class AdrotateScheduleEntity
  * @package Smartling\DbAl\WordpressContentEntities
  */
-class AdrotateGroupsEntity extends AdrotateBaseEntityAbstract
+class AdrotateScheduleEntity extends AdrotateBaseEntityAbstract
 {
     /**
      * @return string
      */
     public static function getTableName()
     {
-        return 'adrotate_groups';
+        return 'adrotate_schedule';
     }
     
     /**
@@ -25,28 +25,20 @@ class AdrotateGroupsEntity extends AdrotateBaseEntityAbstract
         return [
             'id',
             'name',
-            'modus',
-            'fallback',
-            'cat',
-            'cat_loc',
-            'cat_par',
-            'page',
-            'page_loc',
-            'page_par',
-            'mobile',
-            'geo',
-            'wrapper_before',
-            'wrapper_after',
-            'align',
-            'gridrows',
-            'gridcolumns',
-            'admargin',
-            'admargin_bottom',
-            'admargin_left',
-            'admargin_right',
-            'adwidth',
-            'adheight',
-            'adspeed',
+            'starttime',
+            'stoptime',
+            'maxclicks',
+            'maximpressions',
+            'spread',
+            'daystarttime',
+            'daystoptime',
+            'day_mon',
+            'day_tue',
+            'day_wed',
+            'day_thu',
+            'day_fri',
+            'day_sat',
+            'day_sun',
         ];
     }
     
@@ -56,6 +48,14 @@ class AdrotateGroupsEntity extends AdrotateBaseEntityAbstract
     public function getMetadata()
     {
         return [];
+    }
+    
+    /**
+     * @return mixed
+     */
+    public function getTitle()
+    {
+        return $this->name;
     }
     
     /**
@@ -77,8 +77,8 @@ class AdrotateGroupsEntity extends AdrotateBaseEntityAbstract
     {
         return [
             'id'      => (int)$this->{$this->getPrimaryFieldName()},
-            'title'   => $this->getTitle(),
-            'type'    => $this->getType(),
+            'title'   => $this->name,
+            'type'    => null,
             'author'  => null,
             'status'  => null,
             'locales' => null,
@@ -87,23 +87,15 @@ class AdrotateGroupsEntity extends AdrotateBaseEntityAbstract
     }
     
     /**
+     * Static functions
+     */
+    
+    /**
      * @return string
      */
     public function getPrimaryFieldName()
     {
         return 'id';
-    }
-    
-    /**
-     * Static functions
-     */
-    
-    /**
-     * @return mixed
-     */
-    public function getTitle()
-    {
-        return $this->name;
     }
     
     /**

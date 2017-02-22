@@ -34,10 +34,14 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
     
     /**
      * AdrotateAdEntity constructor.
+     *
      * @param \Psr\Log\LoggerInterface $logger
+     * @param SmartlingToCMSDatabaseAccessWrapperInterface $dbal
      */
-    public function __construct(LoggerInterface $logger)
-    {
+    public function __construct(
+        LoggerInterface $logger,
+        SmartlingToCMSDatabaseAccessWrapperInterface $dbal
+    ) {
         parent::__construct($logger);
         
         $this->fields = $this->getFields();
@@ -47,6 +51,18 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
         }
         
         $this->setEntityFields($this->fields);
+        
+        $this->setDbal($dbal);
+    }
+    
+    /**
+     * Get fields.
+     *
+     * @return mixed
+     */
+    public function getFields()
+    {
+        return static::getFieldDefinitions();
     }
     
     /**
@@ -59,7 +75,9 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
     public function set(EntityAbstract $entity = null)
     {
         $originalEntity = json_encode($entity->toArray(false));
-        $this->getLogger()->debug(vsprintf('Starting saving adrotate entity: %s', [$originalEntity]));
+        $this->getLogger()
+            ->debug(vsprintf('Starting saving adrotate entity: %s',
+                [$originalEntity]));
         $is_insert = in_array($entity->id, [0, null], true);
         $fields = $entity->toArray();
         
@@ -70,7 +88,9 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
         }
         
         if (0 === count($fields)) {
-            $this->getLogger()->debug(vsprintf('No data has been modified since load. Skipping save', []));
+            $this->getLogger()
+                ->debug(vsprintf('No data has been modified since load. Skipping save',
+                    []));
             
             return $entity;
         }
@@ -79,7 +99,8 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
             unset ($fields['id']);
         }
         
-        $tableName = $this->getDbal()->completeTableName(static::getTableName());
+        $tableName = $this->getDbal()
+            ->completeTableName(static::getTableName());
         
         if ($is_insert) {
             $storeQuery = QueryBuilder::buildInsertQuery($tableName, $fields);
@@ -87,9 +108,11 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
             // update
             $conditionBlock = ConditionBlock::getConditionBlock();
             $conditionBlock->addCondition(
-                Condition::getCondition(ConditionBuilder::CONDITION_SIGN_EQ, 'id', [$entity->id])
+                Condition::getCondition(ConditionBuilder::CONDITION_SIGN_EQ,
+                    'id', [$entity->id])
             );
-            $storeQuery = QueryBuilder::buildUpdateQuery($tableName, $fields, $conditionBlock, ['limit' => 1]);
+            $storeQuery = QueryBuilder::buildUpdateQuery($tableName, $fields,
+                $conditionBlock, ['limit' => 1]);
         }
         
         // log store query before execution
@@ -114,12 +137,12 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
             $entity = $this->resultToEntity($entityFields);
         }
         $this->getLogger()->debug(
-            vsprintf('Finished saving adrotate entity: %s. id=%s', [$originalEntity, $entity->getId()])
+            vsprintf('Finished saving adrotate entity: %s. id=%s',
+                [$originalEntity, $entity->getId()])
         );
         
         return $entity;
     }
-    
     
     /**
      * @return \Smartling\DbAl\SmartlingToCMSDatabaseAccessWrapperInterface
@@ -138,6 +161,39 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
     }
     
     /**
+     * Log query.
+     *
+     * @param string $query
+     */
+    public function logQuery($query)
+    {
+        if (true === $this->getDbal()->needRawSqlLog()) {
+            $this->getLogger()->debug($query);
+        }
+    }
+    
+    /**
+     * Converts object into EntityAbstract child
+     *
+     * @param array $arr
+     *
+     * @return EntityAbstract
+     */
+    protected function resultToEntity(array $arr)
+    {
+        $className = get_class($this);
+        $entity = new $className($this->getLogger(), $this->dbal);
+        
+        foreach ($this->fields as $fieldName) {
+            if (array_key_exists($fieldName, $arr)) {
+                $entity->{$fieldName} = $arr[$fieldName];
+            }
+        }
+        
+        return $entity;
+    }
+    
+    /**
      * Loads the entity from database
      *
      * @param $guid
@@ -147,7 +203,8 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
     public function get($guid)
     {
         $block = new ConditionBlock(ConditionBuilder::CONDITION_BLOCK_LEVEL_OPERATOR_AND);
-        $condition = Condition::getCondition(ConditionBuilder::CONDITION_SIGN_EQ, 'id', [$guid]);
+        $condition = Condition::getCondition(ConditionBuilder::CONDITION_SIGN_EQ,
+            'id', [$guid]);
         $block->addCondition($condition);
         $query = QueryBuilder::buildSelectQuery(
             $this->getDbal()->completeTableName(static::getTableName()),
@@ -183,8 +240,11 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
         $orderBy = false,
         $order = false
     ) {
-        $page = $limit && $offset > 0 ? $offset/$limit + 1 : 1;
-        $pageOptions = '' === $limit ? null : ['limit' => $limit, 'page' => $page];
+        $page = $limit && $offset > 0 ? $offset / $limit + 1 : 1;
+        $pageOptions = '' === $limit ? null : [
+            'limit' => $limit,
+            'page'  => $page,
+        ];
         $query = QueryBuilder::buildSelectQuery(
             $this->getDbal()->completeTableName(static::getTableName()),
             static::getFieldDefinitions(),
@@ -209,6 +269,24 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
     }
     
     /**
+     * Get all by condition.
+     *
+     * @param \Smartling\Helpers\QueryBuilder\Condition\ConditionBlock $conditionBlock
+     *
+     * @return array
+     */
+    public function getByCondition(ConditionBlock $conditionBlock)
+    {
+        $query = QueryBuilder::buildSelectQuery(
+            $this->getDbal()->completeTableName(static::getTableName()),
+            static::getFieldDefinitions(),
+            $conditionBlock
+        );
+        
+        return $this->getDbal()->fetch($query, \ARRAY_A);
+    }
+    
+    /**
      * Get total count of entities.
      *
      * @return int
@@ -229,49 +307,5 @@ abstract class AdrotateBaseEntityAbstract extends VirtualEntityAbstract
         }
         
         return $count;
-    }
-    
-    /**
-     * Get fields.
-     *
-     * @return mixed
-     */
-    public function getFields()
-    {
-        return static::getFieldDefinitions();
-    }
-    
-    /**
-     * Log query.
-     *
-     * @param string $query
-     */
-    public function logQuery($query)
-    {
-        if (true === $this->getDbal()->needRawSqlLog()) {
-            $this->getLogger()->debug($query);
-        }
-    }
-    
-    /**
-     * Converts object into EntityAbstract child
-     *
-     * @param array          $arr
-     * @param EntityAbstract $entity
-     *
-     * @return EntityAbstract
-     */
-    protected function resultToEntity(array $arr)
-    {
-        $className = get_class($this);
-        $entity = new $className($this->getLogger());
-        
-        foreach ($this->fields as $fieldName) {
-            if (array_key_exists($fieldName, $arr)) {
-                $entity->{$fieldName} = $arr[$fieldName];
-            }
-        }
-        
-        return $entity;
     }
 }
