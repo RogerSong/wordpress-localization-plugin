@@ -112,13 +112,13 @@ class AdrotateAdEntity extends AdrotateBaseEntityAbstract
                 $this->getLogger()->debug(
                     sprintf(
                         'Row with these values %s already exists in adrotate_linkmeta table',
-                        json_decode($tagValue)
+                        json_encode($tagValue)
                     )
                 );
             }
         } else {
             $this->getLogger()->debug(
-                sprintf('Field values %s are empty', json_decode($tagValue))
+                sprintf('Field values %s are empty', json_encode($tagValue))
             );
         }
     }
