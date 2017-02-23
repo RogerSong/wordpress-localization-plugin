@@ -356,12 +356,6 @@ class Bootstrap
         ContentTypeNavigationMenuItem::register($di);
         ContentTypeNavigationMenu::register($di);
         
-        // Adrotate.
-        ContentTypeAdrotateAd::register($di);
-        ContentTypeAdrotateGroups::register($di);
-        ContentTypeAdrotateLinkmeta::register($di);
-        ContentTypeAdrotateSchedule::register($di);
-
         /**
          * Post types and taxonomies are registered on 'init' hook, but this code is executed on 'plugins_loaded' hook,
          * so we need to postpone dynamic handlers execution
