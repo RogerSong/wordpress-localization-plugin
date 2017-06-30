@@ -10,6 +10,7 @@ use Smartling\Helpers\Cache;
 use Smartling\Helpers\EntityHelper;
 use Smartling\Helpers\HtmlTagGeneratorHelper;
 use Smartling\Helpers\PluginInfo;
+use Smartling\Helpers\StringHelper;
 use Smartling\Settings\ConfigurationProfileEntity;
 use Smartling\Submissions\SubmissionManager;
 
@@ -165,17 +166,22 @@ abstract class WPAbstract
     }
 
     /**
-     * @param null $data
+     * @param null   $data
+     * @param string $viewFile
      */
-    public function view($data = null)
+    public function view($data = null, $viewFile = '')
     {
         $this->setViewData($data);
-        $class = get_called_class();
-        $class = str_replace('Smartling\\WP\\Controller\\', '', $class);
+        if (StringHelper::isNullOrEmpty($viewFile)) {
+            $class = get_called_class();
+            $class = str_replace('Smartling\\WP\\Controller\\', '', $class);
 
-        $class = str_replace('Controller', '', $class);
-
-        $this->renderViewScript($class . '.php');
+            $class = str_replace('Controller', '', $class);
+            $viewFile = $class . '.php';
+            $this->renderViewScript($viewFile);
+        } else {
+            require_once $viewFile;
+        }
     }
 
     public function renderViewScript($script)
